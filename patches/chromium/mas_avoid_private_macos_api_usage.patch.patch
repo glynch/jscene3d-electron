@@ -50,7 +50,7 @@ system font by checking if it's kCTFontPriorityAttribute is set to
 system priority.
 
 diff --git a/base/BUILD.gn b/base/BUILD.gn
-index 37b8fc7c5f035ad9eeeda8738ee2e891faf1ae29..df301071102be15f3748d434339ce9030ceda0ba 100644
+index 0d3f3638037a2a4b701c0739a43b7ac5ccee5795..a62d7450e2bbd75280191292b2e27ab6fb5338a4 100644
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
 @@ -1085,6 +1085,7 @@ component("base") {
@@ -1020,7 +1020,7 @@ index 367834e678f44d6e71c4218d293e11c3569daf2b..c97fb8f0411b45c1a01e4fab8dc40cc3
    // Used to force the NSApplication's focused accessibility element to be the
    // content::BrowserAccessibilityCocoa accessibility tree when the NSView for
 diff --git a/content/browser/renderer_host/render_widget_host_view_mac.mm b/content/browser/renderer_host/render_widget_host_view_mac.mm
-index cf8652cb6ddbf07e114d576c192bcda99dc78e3a..c4ada35c3ca32ce06ffc57577af7bc4c45c98579 100644
+index fd37e14335bebe3235c4a10b4322fc06f4bd9296..d0ec6830b555bcaddd882d4b626bca7762ad0317 100644
 --- a/content/browser/renderer_host/render_widget_host_view_mac.mm
 +++ b/content/browser/renderer_host/render_widget_host_view_mac.mm
 @@ -52,6 +52,7 @@
@@ -1095,10 +1095,10 @@ index cf8652cb6ddbf07e114d576c192bcda99dc78e3a..c4ada35c3ca32ce06ffc57577af7bc4c
  
  ///////////////////////////////////////////////////////////////////////////////
 diff --git a/content/common/BUILD.gn b/content/common/BUILD.gn
-index 8af29cca616f1a29a2b59b68b7105635cedd6417..a82661cf81efa357a97da45b2d807569443f9b5e 100644
+index 5487c3756c60389a3442c2e59a08c91890fb6f87..f17ed8c3485102ac63f34239b3b31a3a322088f9 100644
 --- a/content/common/BUILD.gn
 +++ b/content/common/BUILD.gn
-@@ -278,6 +278,7 @@ source_set("common") {
+@@ -279,6 +279,7 @@ source_set("common") {
      "//ui/shell_dialogs",
      "//url",
      "//url/ipc:url_ipc",
@@ -1330,10 +1330,10 @@ index 8b7a675d95ad36cbb9528bc5bc7ef05e5124e5a3..ed6a9a326b82b177059317dc4bc54b10
  
  namespace ui {
 diff --git a/media/audio/BUILD.gn b/media/audio/BUILD.gn
-index fe6b3d10d4467983652ad1203f03769e9f236a9f..575c8b7c71eb245b7b431ea450b5f05d5445c60a 100644
+index d3ceb8cfbfe1fb63804232c3fd62bafcd90752bd..a82ca8b52a4b8f96ccb013abd5c0bf7c2765b073 100644
 --- a/media/audio/BUILD.gn
 +++ b/media/audio/BUILD.gn
-@@ -201,6 +201,7 @@ source_set("audio") {
+@@ -199,6 +199,7 @@ source_set("audio") {
        "CoreMedia.framework",
      ]
      weak_frameworks = [ "ScreenCaptureKit.framework" ]  # macOS 13.0
