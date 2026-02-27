@@ -9,10 +9,10 @@ potentially prevent a window from being created.
 TODO(loc): this patch is currently broken.
 
 diff --git a/content/browser/renderer_host/render_frame_host_impl.cc b/content/browser/renderer_host/render_frame_host_impl.cc
-index f4c26a15652ef8e33210e0de650b3424c532790b..9c434c2334af96bbfce578774eb5cadfdedc94cc 100644
+index a71222b4a4d66713c2585d613f3f3f8d50cc1513..bb608393bbbbace62e8cb8b4c937b939a58b26f5 100644
 --- a/content/browser/renderer_host/render_frame_host_impl.cc
 +++ b/content/browser/renderer_host/render_frame_host_impl.cc
-@@ -10006,6 +10006,7 @@ void RenderFrameHostImpl::CreateNewWindow(
+@@ -10007,6 +10007,7 @@ void RenderFrameHostImpl::CreateNewWindow(
            last_committed_origin_, params->window_container_type,
            params->target_url, params->referrer.To<Referrer>(),
            params->frame_name, params->disposition, *params->features,
@@ -21,7 +21,7 @@ index f4c26a15652ef8e33210e0de650b3424c532790b..9c434c2334af96bbfce578774eb5cadf
            &no_javascript_access);
  
 diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
-index 62b142a7d2d0439cbb4b6c3cb893e7d89bee0375..8091e44abb2842b29745c229bf6662248b377461 100644
+index 64bc568b6ee9ac47588358bc4120a3a5646a24a7..003a171003baacb024cebf58b4957eb6979fda8e 100644
 --- a/content/browser/web_contents/web_contents_impl.cc
 +++ b/content/browser/web_contents/web_contents_impl.cc
 @@ -5377,6 +5377,10 @@ FrameTree* WebContentsImpl::CreateNewWindow(
@@ -224,10 +224,10 @@ index d92bab531c12c62a5321a23f4a0cb89691668127..2060e04795ba8e7a923fd0fe3485b8c5
  
  }  // namespace blink
 diff --git a/third_party/blink/renderer/core/frame/local_dom_window.cc b/third_party/blink/renderer/core/frame/local_dom_window.cc
-index 20d51975e347148b71623e41e729a417b4230bc4..5fabc0ad72960fa761c98fdc5601c00afe6d9f1e 100644
+index 96c78317196425a9e4c668c63bb30b86864e68d7..a73047ade88c2ebd426f3216602eac56e4238575 100644
 --- a/third_party/blink/renderer/core/frame/local_dom_window.cc
 +++ b/third_party/blink/renderer/core/frame/local_dom_window.cc
-@@ -2339,6 +2339,8 @@ DOMWindow* LocalDOMWindow::open(v8::Isolate* isolate,
+@@ -2335,6 +2335,8 @@ DOMWindow* LocalDOMWindow::open(v8::Isolate* isolate,
    WebWindowFeatures window_features =
        GetWindowFeaturesFromString(features, entered_window);
  
