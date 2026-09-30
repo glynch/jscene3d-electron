@@ -16,6 +16,7 @@ export const browserModuleList: ElectronInternal.ModuleEntry[] = [
   { name: 'ipcMain', loader: () => require('./ipc-main') },
   { name: 'ImageView', loader: () => require('./views/image-view') },
   { name: 'inAppPurchase', loader: () => require('./in-app-purchase') },
+  { name: 'jscene3dRenderer', loader: () => require('./jscene3d-renderer') },
   { name: 'Menu', loader: () => require('./menu') },
   { name: 'MenuItem', loader: () => require('./menu-item') },
   { name: 'MessageChannelMain', loader: () => require('./message-channel') },
