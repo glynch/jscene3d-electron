@@ -40,7 +40,7 @@ void ReapRendererProcess(base::Process process) {
   int exit_code = 0;
   if (!process.WaitForExitWithTimeout(kShutdownGracePeriod, &exit_code)) {
     std::cerr << "JScene3D renderer PID " << pid
-              << " did not exit after QUIT; killing it\n";
+              << " did not exit after SHUTDOWN; killing it\n";
     if (kill(pid, SIGKILL) != 0 && errno != ESRCH) {
       std::cerr << "Failed to kill JScene3D renderer PID " << pid << ": errno "
                 << errno << '\n';
@@ -198,14 +198,14 @@ void JScene3DRendererProcess::Stop(base::OnceClosure completion) {
 
   if (stdin_write_.is_valid()) {
     // Write directly because SendCommand deliberately rejects once stopping.
-    std::string quit(jscene3d_protocol::kCommandQuit);
-    quit.push_back('\n');
-    HANDLE_EINTR(write(stdin_write_.get(), quit.data(), quit.size()));
+    std::string shutdown(jscene3d_protocol::kCommandShutdown);
+    shutdown.push_back('\n');
+    HANDLE_EINTR(
+        write(stdin_write_.get(), shutdown.data(), shutdown.size()));
   }
-  stdout_watch_.reset();
-  stdout_read_.reset();
+  // Keep the stdout pipe open while reaping so the renderer can complete its
+  // SHUTDOWN_READY write and exit normally.
   stdin_write_.reset();
-  stdout_buffer_.clear();
   output_line_callback_.Reset();
   exit_callback_.Reset();
 
@@ -224,6 +224,9 @@ void JScene3DRendererProcess::Stop(base::OnceClosure completion) {
 }
 
 void JScene3DRendererProcess::FinishStop() {
+  stdout_watch_.reset();
+  stdout_read_.reset();
+  stdout_buffer_.clear();
   stopped_ = true;
   stopping_ = false;
   auto callbacks = std::move(stop_callbacks_);

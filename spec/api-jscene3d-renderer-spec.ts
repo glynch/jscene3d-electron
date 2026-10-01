@@ -1,5 +1,7 @@
 import { expect } from 'chai';
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -177,6 +179,21 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
     expect(jscene3dRenderer.getSessionState(session.sessionId)).to.be.null();
   });
 
+  it('completes the product shutdown handshake before closing pipes', async () => {
+    const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'jscene3d-renderer-shutdown-'));
+    const shutdownMarker = path.join(temporaryDirectory, 'command.txt');
+    try {
+      const ready = deferred();
+      const session = launchRenderer(launchRequest([`--shutdown-marker=${shutdownMarker}`]), { onReady: ready.resolve });
+      await withTimeout(ready.promise, 'renderer readiness');
+
+      await withTimeout(jscene3dRenderer.stopRenderer(session.sessionId), 'renderer stop');
+      expect(fs.readFileSync(shutdownMarker, 'utf8')).to.equal('SHUTDOWN');
+    } finally {
+      fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
+
   it('keeps concurrent sessions and surfaces independent', async () => {
     const readyA = deferred();
     const readyB = deferred();
@@ -245,7 +262,7 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
     const readyA = deferred();
     const readyB = deferred();
     const frameB = deferred();
-    const sessionA = launchRenderer(launchRequest(['--ignore-quit']), { onReady: readyA.resolve });
+    const sessionA = launchRenderer(launchRequest(['--ignore-shutdown']), { onReady: readyA.resolve });
     const sessionB = launchRenderer(launchRequest(), {
       onReady: readyB.resolve,
       onFrameReady: frameB.resolve

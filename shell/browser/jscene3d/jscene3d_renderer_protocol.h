@@ -15,7 +15,7 @@ inline constexpr std::string_view kCommandFrame = "FRAME";
 
 inline constexpr std::string_view kCommandReceiveSurface = "RECEIVE_SURFACE";
 
-inline constexpr std::string_view kCommandQuit = "QUIT";
+inline constexpr std::string_view kCommandShutdown = "SHUTDOWN";
 
 inline constexpr std::string_view kEventRendererReady = "RENDERER_READY";
 
