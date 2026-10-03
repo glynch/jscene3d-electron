@@ -184,11 +184,30 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
     const shutdownMarker = path.join(temporaryDirectory, 'command.txt');
     try {
       const ready = deferred();
-      const session = launchRenderer(launchRequest([`--shutdown-marker=${shutdownMarker}`]), { onReady: ready.resolve });
+      const session = launchRenderer(launchRequest([`--shutdown-marker=${shutdownMarker}`]), {
+        onReady: ready.resolve
+      });
       await withTimeout(ready.promise, 'renderer readiness');
 
       await withTimeout(jscene3dRenderer.stopRenderer(session.sessionId), 'renderer stop');
       expect(fs.readFileSync(shutdownMarker, 'utf8')).to.equal('SHUTDOWN');
+    } finally {
+      fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it('delivers a Scene View command larger than the renderer pipe capacity', async () => {
+    const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'jscene3d-renderer-command-'));
+    const commandMarker = path.join(temporaryDirectory, 'command.txt');
+    try {
+      const ready = deferred();
+      const session = launchRenderer(launchRequest([`--command-marker=${commandMarker}`]), { onReady: ready.resolve });
+      await withTimeout(ready.promise, 'renderer readiness');
+
+      const command = `SCENE_SNAPSHOT ${'x'.repeat(256 * 1024)}`;
+      expect(jscene3dRenderer.sendRendererMessage(session.sessionId, command)).to.be.true();
+      await waitFor(() => fs.existsSync(commandMarker));
+      expect(fs.readFileSync(commandMarker, 'utf8')).to.equal(String(Buffer.byteLength(command)));
     } finally {
       fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }

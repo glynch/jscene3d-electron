@@ -49,12 +49,18 @@ class JScene3DRendererProcess {
   void Stop(base::OnceClosure completion);
 
  private:
+  bool QueueCommand(const std::string& command);
+  bool FlushInput();
+  void HandleInputWritable();
   void ProcessOutput();
   void ProcessOutputLine(const std::string& line);
   void FinishStop();
 
   base::Process process_;
   base::ScopedFD stdin_write_;
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> stdin_watch_;
+  std::string stdin_buffer_;
+  size_t stdin_buffer_offset_ = 0;
   base::ScopedFD stdout_read_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdout_watch_;
   std::string stdout_buffer_;
@@ -64,6 +70,7 @@ class JScene3DRendererProcess {
   bool stopping_ = false;
   bool stopped_ = false;
   bool exit_notified_ = false;
+  bool close_stdin_when_drained_ = false;
 };
 
 }  // namespace electron

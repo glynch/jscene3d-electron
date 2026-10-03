@@ -169,20 +169,58 @@ bool JScene3DRendererProcess::SendCommand(const std::string& command) {
   if (!stdin_write_.is_valid() || stopping_ || stopped_) {
     return false;
   }
-  std::string message = command;
-  if (message.empty() || message.back() != '\n') {
-    message.push_back('\n');
+  return QueueCommand(command);
+}
+
+bool JScene3DRendererProcess::QueueCommand(const std::string& command) {
+  if (!stdin_write_.is_valid()) {
+    return false;
   }
-  base::span<const char> remaining(message);
-  while (!remaining.empty()) {
+  stdin_buffer_.append(command);
+  if (stdin_buffer_.empty() || stdin_buffer_.back() != '\n') {
+    stdin_buffer_.push_back('\n');
+  }
+  return FlushInput();
+}
+
+bool JScene3DRendererProcess::FlushInput() {
+  while (stdin_buffer_offset_ < stdin_buffer_.size()) {
+    base::span<const char> remaining(stdin_buffer_);
+    remaining = remaining.subspan(stdin_buffer_offset_);
     const ssize_t written = HANDLE_EINTR(
         write(stdin_write_.get(), remaining.data(), remaining.size()));
-    if (written <= 0) {
-      return false;
+    if (written > 0) {
+      stdin_buffer_offset_ += static_cast<size_t>(written);
+      continue;
     }
-    remaining = remaining.subspan(static_cast<size_t>(written));
+    if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+      if (!stdin_watch_) {
+        stdin_watch_ = base::FileDescriptorWatcher::WatchWritable(
+            stdin_write_.get(),
+            base::BindRepeating(&JScene3DRendererProcess::HandleInputWritable,
+                                base::Unretained(this)));
+      }
+      return true;
+    }
+    std::cerr << "JScene3D renderer command write failed: errno " << errno
+              << '\n';
+    stdin_watch_.reset();
+    stdin_write_.reset();
+    stdin_buffer_.clear();
+    stdin_buffer_offset_ = 0;
+    return false;
+  }
+  stdin_watch_.reset();
+  stdin_buffer_.clear();
+  stdin_buffer_offset_ = 0;
+  if (close_stdin_when_drained_) {
+    stdin_write_.reset();
   }
   return true;
+}
+
+void JScene3DRendererProcess::HandleInputWritable() {
+  FlushInput();
 }
 
 void JScene3DRendererProcess::Stop(base::OnceClosure completion) {
@@ -197,15 +235,13 @@ void JScene3DRendererProcess::Stop(base::OnceClosure completion) {
   stopping_ = true;
 
   if (stdin_write_.is_valid()) {
-    // Write directly because SendCommand deliberately rejects once stopping.
-    std::string shutdown(jscene3d_protocol::kCommandShutdown);
-    shutdown.push_back('\n');
-    HANDLE_EINTR(
-        write(stdin_write_.get(), shutdown.data(), shutdown.size()));
+    // Preserve command ordering and close only after the cooperative shutdown
+    // command has left the nonblocking pipe buffer.
+    close_stdin_when_drained_ = true;
+    QueueCommand(std::string(jscene3d_protocol::kCommandShutdown));
   }
-  // Keep the stdout pipe open while reaping so the renderer can complete its
+  // Keep stdout open while reaping so the renderer can complete its
   // SHUTDOWN_READY write and exit normally.
-  stdin_write_.reset();
   output_line_callback_.Reset();
   exit_callback_.Reset();
 
@@ -224,6 +260,11 @@ void JScene3DRendererProcess::Stop(base::OnceClosure completion) {
 }
 
 void JScene3DRendererProcess::FinishStop() {
+  stdin_watch_.reset();
+  stdin_write_.reset();
+  stdin_buffer_.clear();
+  stdin_buffer_offset_ = 0;
+  close_stdin_when_drained_ = false;
   stdout_watch_.reset();
   stdout_read_.reset();
   stdout_buffer_.clear();

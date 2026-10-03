@@ -28,7 +28,7 @@
 namespace {
 
 constexpr int32_t kMaximumSurfaceDimension = 16384;
-constexpr size_t kMaximumControlMessageLength = 255;
+constexpr size_t kMaximumControlMessageLength = 16 * 1024 * 1024;
 
 using RendererSessions =
     base::flat_map<int32_t, std::unique_ptr<electron::JScene3DRendererSession>>;

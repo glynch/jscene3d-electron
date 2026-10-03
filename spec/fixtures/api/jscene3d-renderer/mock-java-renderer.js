@@ -9,6 +9,8 @@ const exitAfterReady = process.argv.includes('--exit-after-ready');
 const ignoreShutdown = process.argv.includes('--ignore-shutdown');
 const shutdownMarkerArgument = process.argv.find((argument) => argument.startsWith('--shutdown-marker='));
 const shutdownMarker = shutdownMarkerArgument?.slice('--shutdown-marker='.length);
+const commandMarkerArgument = process.argv.find((argument) => argument.startsWith('--command-marker='));
+const commandMarker = commandMarkerArgument?.slice('--command-marker='.length);
 
 process.stdout.write('RENDERER_READY\n');
 
@@ -28,6 +30,8 @@ process.stdin.on('data', (chunk) => {
       process.stdout.write(`SURFACE_READY ${replacementWidth} ${replacementHeight}\n`);
     } else if (command.startsWith('FRAME')) {
       process.stdout.write('FRAME_READY\n');
+    } else if (command.startsWith('SCENE_SNAPSHOT') && commandMarker) {
+      fs.writeFileSync(commandMarker, String(Buffer.byteLength(command)));
     } else if (command === 'SHUTDOWN' && !ignoreShutdown) {
       process.stdout.write('SHUTDOWN_READY\n', (error) => {
         if (error) {
