@@ -53,6 +53,10 @@ class JScene3DRendererSession {
                                v8::Local<v8::Function> callback);
   void SetSurfaceReadyCallback(v8::Isolate* isolate,
                                v8::Local<v8::Function> callback);
+  void SetSceneSelectionCallback(v8::Isolate* isolate,
+                                 v8::Local<v8::Function> callback);
+  void SetSceneTransformCallback(v8::Isolate* isolate,
+                                 v8::Local<v8::Function> callback);
 
   bool SendCommand(const std::string& command);
   bool Resize(uint64_t expected_surface_generation,
@@ -71,6 +75,10 @@ class JScene3DRendererSession {
   void InvokeFrameReadyCallback();
   void InvokeRendererExitCallback();
   void InvokeSurfaceReadyCallback();
+  void InvokeSceneSelectionCallback(uint64_t request_id,
+                                    uint64_t revision,
+                                    const std::string& selection);
+  void InvokeSceneTransformCallback(const std::string& transform);
 
   const int32_t initial_width_;
   const int32_t initial_height_;
@@ -84,6 +92,8 @@ class JScene3DRendererSession {
   v8::Global<v8::Function> frame_ready_callback_;
   v8::Global<v8::Function> renderer_exit_callback_;
   v8::Global<v8::Function> surface_ready_callback_;
+  v8::Global<v8::Function> scene_selection_callback_;
+  v8::Global<v8::Function> scene_transform_callback_;
   base::WeakPtrFactory<JScene3DRendererSession> weak_factory_{this};
 };
 

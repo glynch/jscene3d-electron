@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "base/functional/bind.h"
@@ -145,6 +146,18 @@ void JScene3DRendererSession::SetSurfaceReadyCallback(
   surface_ready_callback_.Reset(isolate, callback);
 }
 
+void JScene3DRendererSession::SetSceneSelectionCallback(
+    v8::Isolate* isolate,
+    v8::Local<v8::Function> callback) {
+  scene_selection_callback_.Reset(isolate, callback);
+}
+
+void JScene3DRendererSession::SetSceneTransformCallback(
+    v8::Isolate* isolate,
+    v8::Local<v8::Function> callback) {
+  scene_transform_callback_.Reset(isolate, callback);
+}
+
 bool JScene3DRendererSession::SendCommand(const std::string& command) {
   return state_ == State::kRunning && process_.SendCommand(command);
 }
@@ -246,6 +259,34 @@ void JScene3DRendererSession::ProcessOutputLine(const std::string& line) {
     }
     return;
   }
+  constexpr std::string_view kSceneSelectionPrefix = "SCENE_SELECTION ";
+  if (line.starts_with(kSceneSelectionPrefix)) {
+    std::istringstream stream(line);
+    std::string event;
+    uint64_t request_id = 0;
+    uint64_t revision = 0;
+    std::string selection;
+    std::string trailing;
+    stream >> event >> request_id >> revision >> selection;
+    if (stream && !(stream >> trailing) && event == "SCENE_SELECTION" &&
+        !selection.empty()) {
+      InvokeSceneSelectionCallback(request_id, revision, selection);
+    } else {
+      std::cerr << "Rejected invalid JScene3D scene-selection event\n";
+    }
+    return;
+  }
+  const std::string transform_prefix =
+      std::string(jscene3d_protocol::kEventSceneTransform) + " ";
+  if (line.starts_with(transform_prefix)) {
+    const std::string transform = line.substr(transform_prefix.size());
+    if (!transform.empty() && transform.find(' ') == std::string::npos) {
+      InvokeSceneTransformCallback(transform);
+    } else {
+      std::cerr << "Rejected invalid JScene3D scene-transform event\n";
+    }
+    return;
+  }
   if (!line.empty()) {
     std::cout << "JScene3D renderer: " << line << '\n';
   }
@@ -271,6 +312,8 @@ void JScene3DRendererSession::CompleteStop(bool requested_stop,
   renderer_ready_callback_.Reset();
   frame_ready_callback_.Reset();
   surface_ready_callback_.Reset();
+  scene_selection_callback_.Reset();
+  scene_transform_callback_.Reset();
   renderer_exit_callback_.Reset();
   if (requested_stop && state_ != State::kFailed) {
     state_ = State::kStopped;
@@ -309,6 +352,60 @@ void JScene3DRendererSession::InvokeSurfaceReadyCallback() {
   v8::TryCatch try_catch(isolate);
   surface_ready_callback_.Get(isolate)
       ->Call(context, v8::Undefined(isolate), 3, arguments)
+      .FromMaybe(v8::Local<v8::Value>());
+}
+
+void JScene3DRendererSession::InvokeSceneSelectionCallback(
+    uint64_t request_id,
+    uint64_t revision,
+    const std::string& selection) {
+  if (scene_selection_callback_.IsEmpty()) {
+    return;
+  }
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
+  v8::HandleScope handle_scope(isolate);
+  v8::Local<v8::Context> context = isolate->GetCurrentContext();
+  if (context.IsEmpty()) {
+    return;
+  }
+  v8::Context::Scope context_scope(context);
+  v8::Local<v8::String> selection_value;
+  if (!v8::String::NewFromUtf8(isolate, selection.c_str())
+           .ToLocal(&selection_value)) {
+    return;
+  }
+  v8::Local<v8::Value> arguments[] = {
+      v8::Number::New(isolate, static_cast<double>(request_id)),
+      v8::Number::New(isolate, static_cast<double>(revision)),
+      selection_value,
+  };
+  v8::TryCatch try_catch(isolate);
+  scene_selection_callback_.Get(isolate)
+      ->Call(context, v8::Undefined(isolate), 3, arguments)
+      .FromMaybe(v8::Local<v8::Value>());
+}
+
+void JScene3DRendererSession::InvokeSceneTransformCallback(
+    const std::string& transform) {
+  if (scene_transform_callback_.IsEmpty()) {
+    return;
+  }
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
+  v8::HandleScope handle_scope(isolate);
+  v8::Local<v8::Context> context = isolate->GetCurrentContext();
+  if (context.IsEmpty()) {
+    return;
+  }
+  v8::Context::Scope context_scope(context);
+  v8::Local<v8::String> transform_value;
+  if (!v8::String::NewFromUtf8(isolate, transform.c_str())
+           .ToLocal(&transform_value)) {
+    return;
+  }
+  v8::Local<v8::Value> arguments[] = {transform_value};
+  v8::TryCatch try_catch(isolate);
+  scene_transform_callback_.Get(isolate)
+      ->Call(context, v8::Undefined(isolate), 1, arguments)
       .FromMaybe(v8::Local<v8::Value>());
 }
 

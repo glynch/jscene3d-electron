@@ -213,6 +213,62 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
     }
   });
 
+  it('forwards revision-qualified Scene View selection events', async () => {
+    const ready = deferred();
+    const selection = deferred<[number, number, string]>();
+    const session = launchRenderer(launchRequest(), {
+      onReady: ready.resolve,
+      onSceneSelection: (requestId, revision, occurrence) => selection.resolve([requestId, revision, occurrence])
+    });
+    await withTimeout(ready.promise, 'renderer readiness');
+
+    expect(jscene3dRenderer.sendRendererMessage(session.sessionId, 'SCENE_PICK 9 3 0 0')).to.be.true();
+    expect(await withTimeout(selection.promise, 'Scene View selection')).to.deep.equal([9, 3, 'c2VsZWN0ZWQ']);
+  });
+
+  it('forwards renderer-owned Scene transform events', async () => {
+    const ready = deferred();
+    const transform = deferred<string>();
+    const session = launchRenderer(launchRequest(), {
+      onReady: ready.resolve,
+      onSceneTransform: transform.resolve
+    });
+    await withTimeout(ready.promise, 'renderer readiness');
+
+    expect(
+      jscene3dRenderer.sendRendererMessage(session.sessionId, 'SCENE_TRANSFORM_POINTER BEGIN 320 240 800 600')
+    ).to.be.true();
+    expect(await withTimeout(transform.promise, 'Scene transform')).to.equal('eyJwaGFzZSI6ImJlZ2luIn0');
+  });
+
+  it('rejects malformed Scene events without poisoning later valid events', async () => {
+    const ready = deferred();
+    const validSelection = deferred();
+    const validTransform = deferred();
+    const selections: unknown[][] = [];
+    const transforms: unknown[][] = [];
+    const session = launchRenderer(launchRequest(), {
+      onReady: ready.resolve,
+      onSceneSelection: (...event) => {
+        selections.push(event);
+        validSelection.resolve();
+      },
+      onSceneTransform: (...event) => {
+        transforms.push(event);
+        validTransform.resolve();
+      }
+    });
+    await withTimeout(ready.promise, 'renderer readiness');
+
+    expect(jscene3dRenderer.sendRendererMessage(session.sessionId, 'EMIT_MALFORMED_EVENTS')).to.be.true();
+    await withTimeout(Promise.all([validSelection.promise, validTransform.promise]), 'valid Scene events');
+    await delay(50);
+
+    expect(selections).to.deep.equal([[11, 4, 'dmFsaWQ']]);
+    expect(transforms).to.deep.equal([['dmFsaWQ']]);
+    expect(jscene3dRenderer.getSessionState(session.sessionId)?.state).to.equal('running');
+  });
+
   it('keeps concurrent sessions and surfaces independent', async () => {
     const readyA = deferred();
     const readyB = deferred();

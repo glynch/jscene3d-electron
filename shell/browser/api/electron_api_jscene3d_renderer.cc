@@ -146,18 +146,30 @@ void RendererStopped(int32_t session_id, JavaScriptCallback callback) {
       base::BindOnce(&RemoveStoppedRenderer, session_id, std::move(callback)));
 }
 
-v8::Local<v8::Value> LaunchRenderer(
-    v8::Isolate* isolate,
-    v8::Local<v8::Value> request,
-    v8::Local<v8::Function> renderer_ready_callback,
-    v8::Local<v8::Function> frame_ready_callback,
-    v8::Local<v8::Function> renderer_exit_callback,
-    v8::Local<v8::Function> surface_ready_callback) {
+v8::Local<v8::Value> LaunchRenderer(v8::Isolate* isolate,
+                                    v8::Local<v8::Value> request,
+                                    v8::Local<v8::Value> observers) {
   electron::JScene3DRendererLaunchSpec launch_spec;
   int32_t width = 0;
   int32_t height = 0;
   if (!ParseLaunchRequest(isolate, request, &launch_spec, &width, &height) ||
-      NextRendererSessionId() <= 0) {
+      !observers->IsObject() || NextRendererSessionId() <= 0) {
+    return v8::Null(isolate);
+  }
+
+  gin::Dictionary observer_dictionary(isolate, observers.As<v8::Object>());
+  v8::Local<v8::Function> renderer_ready_callback;
+  v8::Local<v8::Function> frame_ready_callback;
+  v8::Local<v8::Function> renderer_exit_callback;
+  v8::Local<v8::Function> surface_ready_callback;
+  v8::Local<v8::Function> scene_selection_callback;
+  v8::Local<v8::Function> scene_transform_callback;
+  if (!observer_dictionary.Get("onReady", &renderer_ready_callback) ||
+      !observer_dictionary.Get("onFrameReady", &frame_ready_callback) ||
+      !observer_dictionary.Get("onExit", &renderer_exit_callback) ||
+      !observer_dictionary.Get("onSurfaceReady", &surface_ready_callback) ||
+      !observer_dictionary.Get("onSceneSelection", &scene_selection_callback) ||
+      !observer_dictionary.Get("onSceneTransform", &scene_transform_callback)) {
     return v8::Null(isolate);
   }
 
@@ -171,6 +183,8 @@ v8::Local<v8::Value> LaunchRenderer(
   session->SetFrameReadyCallback(isolate, frame_ready_callback);
   session->SetRendererExitCallback(isolate, renderer_exit_callback);
   session->SetSurfaceReadyCallback(isolate, surface_ready_callback);
+  session->SetSceneSelectionCallback(isolate, scene_selection_callback);
+  session->SetSceneTransformCallback(isolate, scene_transform_callback);
   if (!session->Launch(launch_spec)) {
     return v8::Null(isolate);
   }

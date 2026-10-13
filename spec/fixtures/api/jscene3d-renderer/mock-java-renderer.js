@@ -30,6 +30,23 @@ process.stdin.on('data', (chunk) => {
       process.stdout.write(`SURFACE_READY ${replacementWidth} ${replacementHeight}\n`);
     } else if (command.startsWith('FRAME')) {
       process.stdout.write('FRAME_READY\n');
+    } else if (command.startsWith('SCENE_PICK ')) {
+      const [, requestId, revision] = command.split(' ');
+      process.stdout.write(`SCENE_SELECTION ${requestId} ${revision} c2VsZWN0ZWQ\n`);
+    } else if (command.startsWith('SCENE_TRANSFORM_POINTER BEGIN ')) {
+      process.stdout.write('SCENE_TRANSFORM eyJwaGFzZSI6ImJlZ2luIn0\n');
+    } else if (command === 'EMIT_MALFORMED_EVENTS') {
+      process.stdout.write(
+        [
+          'SCENE_SELECTION invalid 3 c2VsZWN0ZWQ',
+          'SCENE_SELECTION 9 3 c2VsZWN0ZWQ trailing',
+          'SCENE_TRANSFORM ',
+          'SCENE_TRANSFORM invalid payload',
+          'SCENE_SELECTION 11 4 dmFsaWQ',
+          'SCENE_TRANSFORM dmFsaWQ',
+          ''
+        ].join('\n')
+      );
     } else if (command.startsWith('SCENE_SNAPSHOT') && commandMarker) {
       fs.writeFileSync(commandMarker, String(Buffer.byteLength(command)));
     } else if (command === 'SHUTDOWN' && !ignoreShutdown) {
