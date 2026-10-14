@@ -164,12 +164,15 @@ v8::Local<v8::Value> LaunchRenderer(v8::Isolate* isolate,
   v8::Local<v8::Function> surface_ready_callback;
   v8::Local<v8::Function> scene_selection_callback;
   v8::Local<v8::Function> scene_transform_callback;
+  v8::Local<v8::Function> scene_camera_state_callback;
   if (!observer_dictionary.Get("onReady", &renderer_ready_callback) ||
       !observer_dictionary.Get("onFrameReady", &frame_ready_callback) ||
       !observer_dictionary.Get("onExit", &renderer_exit_callback) ||
       !observer_dictionary.Get("onSurfaceReady", &surface_ready_callback) ||
       !observer_dictionary.Get("onSceneSelection", &scene_selection_callback) ||
-      !observer_dictionary.Get("onSceneTransform", &scene_transform_callback)) {
+      !observer_dictionary.Get("onSceneTransform", &scene_transform_callback) ||
+      !observer_dictionary.Get("onSceneCameraState",
+                               &scene_camera_state_callback)) {
     return v8::Null(isolate);
   }
 
@@ -185,6 +188,7 @@ v8::Local<v8::Value> LaunchRenderer(v8::Isolate* isolate,
   session->SetSurfaceReadyCallback(isolate, surface_ready_callback);
   session->SetSceneSelectionCallback(isolate, scene_selection_callback);
   session->SetSceneTransformCallback(isolate, scene_transform_callback);
+  session->SetSceneCameraStateCallback(isolate, scene_camera_state_callback);
   if (!session->Launch(launch_spec)) {
     return v8::Null(isolate);
   }

@@ -158,6 +158,12 @@ void JScene3DRendererSession::SetSceneTransformCallback(
   scene_transform_callback_.Reset(isolate, callback);
 }
 
+void JScene3DRendererSession::SetSceneCameraStateCallback(
+    v8::Isolate* isolate,
+    v8::Local<v8::Function> callback) {
+  scene_camera_state_callback_.Reset(isolate, callback);
+}
+
 bool JScene3DRendererSession::SendCommand(const std::string& command) {
   return state_ == State::kRunning && process_.SendCommand(command);
 }
@@ -287,6 +293,18 @@ void JScene3DRendererSession::ProcessOutputLine(const std::string& line) {
     }
     return;
   }
+  const std::string camera_state_prefix =
+      std::string(jscene3d_protocol::kEventSceneCameraState) + " ";
+  if (line.starts_with(camera_state_prefix)) {
+    const std::string camera_state = line.substr(camera_state_prefix.size());
+    if (!camera_state.empty() &&
+        camera_state.find(' ') == std::string::npos) {
+      InvokeSceneCameraStateCallback(camera_state);
+    } else {
+      std::cerr << "Rejected invalid JScene3D scene-camera-state event\n";
+    }
+    return;
+  }
   if (!line.empty()) {
     std::cout << "JScene3D renderer: " << line << '\n';
   }
@@ -314,6 +332,7 @@ void JScene3DRendererSession::CompleteStop(bool requested_stop,
   surface_ready_callback_.Reset();
   scene_selection_callback_.Reset();
   scene_transform_callback_.Reset();
+  scene_camera_state_callback_.Reset();
   renderer_exit_callback_.Reset();
   if (requested_stop && state_ != State::kFailed) {
     state_ = State::kStopped;
@@ -405,6 +424,30 @@ void JScene3DRendererSession::InvokeSceneTransformCallback(
   v8::Local<v8::Value> arguments[] = {transform_value};
   v8::TryCatch try_catch(isolate);
   scene_transform_callback_.Get(isolate)
+      ->Call(context, v8::Undefined(isolate), 1, arguments)
+      .FromMaybe(v8::Local<v8::Value>());
+}
+
+void JScene3DRendererSession::InvokeSceneCameraStateCallback(
+    const std::string& camera_state) {
+  if (scene_camera_state_callback_.IsEmpty()) {
+    return;
+  }
+  v8::Isolate* isolate = JavascriptEnvironment::GetIsolate();
+  v8::HandleScope handle_scope(isolate);
+  v8::Local<v8::Context> context = isolate->GetCurrentContext();
+  if (context.IsEmpty()) {
+    return;
+  }
+  v8::Context::Scope context_scope(context);
+  v8::Local<v8::String> camera_state_value;
+  if (!v8::String::NewFromUtf8(isolate, camera_state.c_str())
+           .ToLocal(&camera_state_value)) {
+    return;
+  }
+  v8::Local<v8::Value> arguments[] = {camera_state_value};
+  v8::TryCatch try_catch(isolate);
+  scene_camera_state_callback_.Get(isolate)
       ->Call(context, v8::Undefined(isolate), 1, arguments)
       .FromMaybe(v8::Local<v8::Value>());
 }

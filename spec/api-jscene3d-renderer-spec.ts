@@ -241,12 +241,29 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
     expect(await withTimeout(transform.promise, 'Scene transform')).to.equal('eyJwaGFzZSI6ImJlZ2luIn0');
   });
 
+  it('forwards renderer-owned Scene camera-state events', async () => {
+    const ready = deferred();
+    const cameraState = deferred<string>();
+    const session = launchRenderer(launchRequest(), {
+      onReady: ready.resolve,
+      onSceneCameraState: cameraState.resolve
+    });
+    await withTimeout(ready.promise, 'renderer readiness');
+
+    expect(jscene3dRenderer.sendRendererMessage(session.sessionId, 'SCENE_NAVIGATE ZOOM -120')).to.be.true();
+    expect(await withTimeout(cameraState.promise, 'Scene camera state')).to.equal(
+      'eyJwcm9qZWN0aW9uIjoicGVyc3BlY3RpdmUifQ'
+    );
+  });
+
   it('rejects malformed Scene events without poisoning later valid events', async () => {
     const ready = deferred();
     const validSelection = deferred();
     const validTransform = deferred();
     const selections: unknown[][] = [];
     const transforms: unknown[][] = [];
+    const cameraStates: unknown[][] = [];
+    const validCameraState = deferred();
     const session = launchRenderer(launchRequest(), {
       onReady: ready.resolve,
       onSceneSelection: (...event) => {
@@ -256,16 +273,24 @@ ifdescribe(process.platform === 'darwin')('jscene3dRenderer module', () => {
       onSceneTransform: (...event) => {
         transforms.push(event);
         validTransform.resolve();
+      },
+      onSceneCameraState: (...event) => {
+        cameraStates.push(event);
+        validCameraState.resolve();
       }
     });
     await withTimeout(ready.promise, 'renderer readiness');
 
     expect(jscene3dRenderer.sendRendererMessage(session.sessionId, 'EMIT_MALFORMED_EVENTS')).to.be.true();
-    await withTimeout(Promise.all([validSelection.promise, validTransform.promise]), 'valid Scene events');
+    await withTimeout(
+      Promise.all([validSelection.promise, validTransform.promise, validCameraState.promise]),
+      'valid Scene events'
+    );
     await delay(50);
 
     expect(selections).to.deep.equal([[11, 4, 'dmFsaWQ']]);
     expect(transforms).to.deep.equal([['dmFsaWQ']]);
+    expect(cameraStates).to.deep.equal([['Y2FtZXJh']]);
     expect(jscene3dRenderer.getSessionState(session.sessionId)?.state).to.equal('running');
   });
 

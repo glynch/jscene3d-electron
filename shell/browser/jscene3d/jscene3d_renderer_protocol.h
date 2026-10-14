@@ -25,6 +25,9 @@ inline constexpr std::string_view kEventSurfaceReady = "SURFACE_READY";
 
 inline constexpr std::string_view kEventSceneTransform = "SCENE_TRANSFORM";
 
+inline constexpr std::string_view kEventSceneCameraState =
+    "SCENE_CAMERA_STATE";
+
 }  // namespace electron::jscene3d_protocol
 
 #endif  // ELECTRON_SHELL_BROWSER_JSCENE3D_JSCENE3D_RENDERER_PROTOCOL_H_

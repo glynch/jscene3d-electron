@@ -35,6 +35,8 @@ process.stdin.on('data', (chunk) => {
       process.stdout.write(`SCENE_SELECTION ${requestId} ${revision} c2VsZWN0ZWQ\n`);
     } else if (command.startsWith('SCENE_TRANSFORM_POINTER BEGIN ')) {
       process.stdout.write('SCENE_TRANSFORM eyJwaGFzZSI6ImJlZ2luIn0\n');
+    } else if (command.startsWith('SCENE_NAVIGATE ')) {
+      process.stdout.write('SCENE_CAMERA_STATE eyJwcm9qZWN0aW9uIjoicGVyc3BlY3RpdmUifQ\n');
     } else if (command === 'EMIT_MALFORMED_EVENTS') {
       process.stdout.write(
         [
@@ -42,8 +44,11 @@ process.stdin.on('data', (chunk) => {
           'SCENE_SELECTION 9 3 c2VsZWN0ZWQ trailing',
           'SCENE_TRANSFORM ',
           'SCENE_TRANSFORM invalid payload',
+          'SCENE_CAMERA_STATE ',
+          'SCENE_CAMERA_STATE invalid payload',
           'SCENE_SELECTION 11 4 dmFsaWQ',
           'SCENE_TRANSFORM dmFsaWQ',
+          'SCENE_CAMERA_STATE Y2FtZXJh',
           ''
         ].join('\n')
       );

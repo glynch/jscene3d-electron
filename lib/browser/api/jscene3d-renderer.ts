@@ -18,6 +18,7 @@ export type JScene3DRendererObservers = {
   onSurfaceReady?: (surfaceGeneration: number, width: number, height: number) => void;
   onSceneSelection?: (requestId: number, revision: number, selection: string) => void;
   onSceneTransform?: (transform: string) => void;
+  onSceneCameraState?: (cameraState: string) => void;
 };
 
 export type JScene3DRendererSession = {
@@ -54,7 +55,8 @@ function launchRenderer(
     onExit: observers.onExit ?? noop,
     onSurfaceReady: observers.onSurfaceReady ?? noop,
     onSceneSelection: observers.onSceneSelection ?? noop,
-    onSceneTransform: observers.onSceneTransform ?? noop
+    onSceneTransform: observers.onSceneTransform ?? noop,
+    onSceneCameraState: observers.onSceneCameraState ?? noop
   }) as JScene3DRendererSession | null;
   if (result === null) {
     throw new TypeError('Invalid JScene3D renderer launch request or renderer startup failed');
